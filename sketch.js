@@ -35,15 +35,15 @@ function setup() {
 	timeLeft = timeInRound;
 
 	//Hardware code
-	// serial = new p5.SerialPort();       // make a new instance of the serialport library
-	// serial.on('list', printList);       // set a callback function for the serialport list event
-	// serial.on('connected', serverConnected); // callback for connecting to the server
-	// serial.on('open', portOpen);        // callback for the port opening
-	// serial.on('data', serialEvent);     // callback for when new data arrives
-	// serial.on('error', serialError);    // callback for errors
-	// serial.on('close', portClose);      // callback for the port closing
-	// serial.list();                      // list the serial ports
-	//serial.open(portName);              // open a serial port
+	serial = new p5.SerialPort();       // make a new instance of the serialport library
+	serial.on('list', printList);       // set a callback function for the serialport list event
+	serial.on('connected', serverConnected); // callback for connecting to the server
+	serial.on('open', portOpen);        // callback for the port opening
+	serial.on('data', serialEvent);     // callback for when new data arrives
+	serial.on('error', serialError);    // callback for errors
+	serial.on('close', portClose);      // callback for the port closing
+	serial.list();                      // list the serial ports
+	serial.open(portName);              // open a serial port
 }
 
 function draw() {
@@ -92,7 +92,7 @@ function updateCurrentWord() {
 }
 
 function keyPressed() {
-	checkAnswer(keyCode);
+
 }
 
 //Checks the pressed values and updates the score if correct, resets after
@@ -148,12 +148,8 @@ function portOpen() {
 function serialEvent() {
   // read a byte from the serial port, convert it to a number:
   inData = Number(serial.read());
-	if(inData == 68){
-		speed--;
-	}
-	if(inData == 85){
-		speed++;
-	}
+	checkAnswer(47 + inData);
+	//console.log(inData);
 }
 
 function serialError(err) {
