@@ -31,7 +31,7 @@ var polysynth;
 var fChord = ["F4", "C4", "A5"];
 var gChord = ["G4", "B5", "D5"];
 var aChord = ["A4", "C5", "E5"];
-var part8, part16;
+var part8, part16, hpart16;
 
 function preload() {
 	myFont = loadFont("Raleway.otf");
@@ -77,7 +77,11 @@ function setup() {
 
 	part16 = new Tone.Sequence(function(time, note){
 	synth.triggerAttackRelease(note, "8n", time);
-	}, ["A4", ["G5", "F5"], "A5", "C5", "D5", "E5", "G5", "A5"], "16n").start();
+}, ["A4", ["G5", "F5"], "C5", "A4", "D5", "E5", "G5", "A5"], "16n").start();
+
+	hpart16 = new Tone.Sequence(function(time, note){
+	synth.triggerAttackRelease(note, "8n", time);
+}, ["A4", ["A6", "F6"], "C6", "C6", "D6", "E6", "G6", "A6"], "16n").start();
 
 	chordLoop.start(0);
 	Tone.Transport.start();
@@ -85,21 +89,39 @@ function setup() {
 }
 
 function draw() {
-	background(164);
-	playDraw();
+	if(state == 0)
+		startDraw();
+	else if(state == 1)
+		playDraw();
+	else
+		helpDraw();
 }
 
 function startDraw() {
+	background(200);
+	textFont(myFont);
+	textSize(52);
+	fill(0, 125, 0);
+	textAlign(CENTER)
+	text("Hue2", width/2, 60);
+	// rectMode(CENTER);
+	// noFill();
+	// rect(width/2, height/2, 150, 60);
 
+	textSize(32);
+	fill(125,0,0);
+	text("Play", width/2, 200);
+	fill(0,0,125);
+	text("Help", width/2, 250);
 }
 
 //To be displayed if state is 1
 function playDraw() {
-	background('grey');
+	background(200);
 	textFont(myFont);
 	textAlign(CENTER, CENTER);
 	fill(currentColor);
-	textSize(64);
+	textSize(72);
 	text(currentWord, width/2, height/2);
 
 	//Time left converted to seconds
@@ -118,6 +140,9 @@ function playDraw() {
 function endDraw() {
 }
 
+function helpDraw() {
+
+}
 function playMusic() {
 }
 
@@ -132,8 +157,24 @@ function updateCurrentWord() {
 }
 
 function keyPressed() {
-	part8.stop();
-	part16.stop();
+	//part8.stop();
+	//part16.stop();
+}
+
+function mouseClicked() {
+	console.log("X: " + mouseX);
+	console.log("Y: " + mouseY);
+	console.log("State is " + state);
+	if(mouseX > 290 && mouseX < 350) {
+		if(mouseY > 175 && mouseY < 210) {
+			state = 1;
+		}
+		else if(mouseY >= 210 && mouseY < 255) {
+			state = 2;
+		}
+	}
+	return false;
+
 }
 
 //Checks the pressed values and updates the score if correct, resets after
