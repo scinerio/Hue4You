@@ -15,6 +15,8 @@ var seconds = 3;
 //State of the game
 var state = 0;
 
+var myFont;
+
 //Hardware variables
 var serial;                             // variable to hold an instance of the serialport library
 var portName = 'COM4';                  // fill in your serial port name here
@@ -22,8 +24,17 @@ var inData;                             // for incoming serial data
 var ledOn = false;
 var mappedData = 0;
 
-function preload() {
+//Sound variables
+var synth, chordLoop;
+var polysynth;
 
+var fChord = ["F4", "C4", "A5"];
+var gChord = ["G4", "B5", "D5"];
+var aChord = ["A4", "C5", "E5"];
+var part8, part16;
+
+function preload() {
+	myFont = loadFont("Raleway.otf");
 }
 
 function setup() {
@@ -44,12 +55,38 @@ function setup() {
 	serial.on('close', portClose);      // callback for the port closing
 	serial.list();                      // list the serial ports
 	serial.open(portName);              // open a serial port
+
+
+	//Sound variables
+	Tone.Transport.bpm.value = 60;
+  Tone.Transport.loop = true;
+
+	synth = new Tone.PolySynth(4, Tone.Monosynth).toMaster();
+
+	//Loop will always be playing
+	chordLoop = new Tone.Loop(function(time){
+		synth.triggerAttackRelease(["F4", "C4", "A4"], "8n", time);
+		synth.triggerAttackRelease(["G4", "B4", "D4"], "8n", time + "+4n");
+		synth.triggerAttackRelease(["A4", "C5", "E5"], "8n", time + "+4n*2");
+		synth.triggerAttackRelease(["G4", "B4", "D4"], "8n", time + "+4n*3");
+  	}, "1n");
+
+	part8 = new Tone.Sequence(function(time, note){
+	synth.triggerAttackRelease(note, "8n", time);
+	}, ["F4", "A4", "G4", "A4", "B4", "C4", "D4", "E4"], "8n").start();
+
+	part16 = new Tone.Sequence(function(time, note){
+	synth.triggerAttackRelease(note, "8n", time);
+	}, ["A4", ["G5", "F5"], "A5", "C5", "D5", "E5", "G5", "A5"], "16n").start();
+
+	chordLoop.start(0);
+	Tone.Transport.start();
+
 }
 
 function draw() {
 	background(164);
 	playDraw();
-
 }
 
 function startDraw() {
@@ -58,8 +95,8 @@ function startDraw() {
 
 //To be displayed if state is 1
 function playDraw() {
-
-
+	background('grey');
+	textFont(myFont);
 	textAlign(CENTER, CENTER);
 	fill(currentColor);
 	textSize(64);
@@ -71,7 +108,7 @@ function playDraw() {
 	text(Math.trunc(timeLeft / 60), 20, 20);
 
 	//Score
-	text("SCORE:" + score, width/2, 20);
+	text("SCORE: " + score, width/2, 20);
 
 	if(timeLeft == 60)
 		updateCurrentWord();
@@ -79,6 +116,9 @@ function playDraw() {
 }
 
 function endDraw() {
+}
+
+function playMusic() {
 }
 
 function mouseClicked() {
@@ -92,7 +132,8 @@ function updateCurrentWord() {
 }
 
 function keyPressed() {
-
+	part8.stop();
+	part16.stop();
 }
 
 //Checks the pressed values and updates the score if correct, resets after
