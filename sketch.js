@@ -10,22 +10,26 @@ var timeLeft;
 //Number of milliseconds in the round + 60 to prevent 0 from displaying
 var timeInRound;
 //Amount of seconds per round
-var seconds = 3;
+var seconds;
 
 //State of the game
 var state = 0;
 
 var myFont;
 
+var lives = 5;
+
+var lastGreen = false;
+
+var finalScore;
 //Hardware variables
 var serial;                             // variable to hold an instance of the serialport library
 var portName = 'COM4';                  // fill in your serial port name here
 var inData;                             // for incoming serial data
-var ledOn = false;
 var mappedData = 0;
 
 //Sound variables
-var synth, chordLoop;
+var synth, chordLoop, fmSynth;
 var polysynth;
 
 var fChord = ["F4", "C4", "A5"];
@@ -42,6 +46,10 @@ function setup() {
 	frameRate(60);
 	currentWord = random(myColors);
 	currentColor = random(myColors);
+	if(mappedData > 0)
+		seconds = mappedData;
+	else
+		seconds = 3;
 	timeInRound = 60*(seconds+1);
 	timeLeft = timeInRound;
 
@@ -62,7 +70,7 @@ function setup() {
   Tone.Transport.loop = true;
 
 	synth = new Tone.PolySynth(4, Tone.Monosynth).toMaster();
-
+	fmSynth = new Tone.FMSynth().toMaster();
 	//Loop will always be playing
 	chordLoop = new Tone.Loop(function(time){
 		synth.triggerAttackRelease(["F4", "C4", "A4"], "8n", time);
@@ -77,12 +85,13 @@ function setup() {
 
 	part16 = new Tone.Sequence(function(time, note){
 	synth.triggerAttackRelease(note, "8n", time);
-}, ["A4", ["G5", "F5"], "C5", "A4", "D5", "E5", "G5", "A5"], "16n").start();
+}, ["A4", ["G5", "F5"], "A5", "A4", "D5", "E5", "G5", "A5"], "16n").start();
 
 	hpart16 = new Tone.Sequence(function(time, note){
-	synth.triggerAttackRelease(note, "8n", time);
-}, ["A4", ["A6", "F6"], "C6", "C6", "D6", "E6", "G6", "A6"], "16n").start();
+	fmSynth.triggerAttackRelease(note, "8n", time);
+}, ["G6", ["A6", "G6"], "A6", "C6", "D6", "E6", "G6", "E6"], "16n").start();
 
+	fmSynth.volume.value = -40;
 	chordLoop.start(0);
 	Tone.Transport.start();
 
@@ -93,8 +102,10 @@ function draw() {
 		startDraw();
 	else if(state == 1)
 		playDraw();
-	else
+	else if(state == 2)
 		helpDraw();
+	else
+		endDraw();
 }
 
 function startDraw() {
@@ -104,6 +115,7 @@ function startDraw() {
 	fill(0, 125, 0);
 	textAlign(CENTER)
 	text("Hue2", width/2, 60);
+
 	// rectMode(CENTER);
 	// noFill();
 	// rect(width/2, height/2, 150, 60);
@@ -117,6 +129,10 @@ function startDraw() {
 
 //To be displayed if state is 1
 function playDraw() {
+	chordLoop.start();
+	fmSynth.volume.value = -5;
+	part8.start();
+	part16.start();
 	background(200);
 	textFont(myFont);
 	textAlign(CENTER, CENTER);
@@ -132,21 +148,45 @@ function playDraw() {
 	//Score
 	text("SCORE: " + score, width/2, 20);
 
-	if(timeLeft == 60)
+
+	text("Lives:" + lives, 480, 20);
+
+
+	if(timeLeft == 60) {
 		updateCurrentWord();
+		lives--;
+		if(lives == 0)
+			state = 3;
+	}
 	timeLeft--;
 }
 
 function endDraw() {
+	background(200);
+	textSize(52);
+	fill(0,0,125);
+	textAlign(CENTER);
+	text("Final Score: " + finalScore, width/2, height/2);
+
+	fill('green');
+	textSize(30);
+	text("Press green to play again", width/2, height/2 + 50)
 }
 
 function helpDraw() {
-
+	background(200);
+	textAlign(CENTER);
+	textSize(52);
+	fill(125,0,0);
+	text("Help", width/2, 54);
+	fill(0,0,125);
+	textSize(30)
+	text("Gain points by pressing the button", width/2, height/2 - 30);
+	text("that the word is colored in!", width/2, height/2);
+	fill(0,125,0);
+	text("Back", width/2, height/2 + 200);
 }
 function playMusic() {
-}
-
-function mouseClicked() {
 }
 
 //Updates the text, color of text, and resets time
@@ -165,47 +205,76 @@ function mouseClicked() {
 	console.log("X: " + mouseX);
 	console.log("Y: " + mouseY);
 	console.log("State is " + state);
-	if(mouseX > 290 && mouseX < 350) {
-		if(mouseY > 175 && mouseY < 210) {
-			state = 1;
-		}
-		else if(mouseY >= 210 && mouseY < 255) {
-			state = 2;
+	if(state == 0) {
+		if(mouseX > 290 && mouseX < 350) {
+			if(mouseY > 175 && mouseY < 210) {
+				state = 1;
+			}
+			else if(mouseY >= 210 && mouseY < 255) {
+				state = 2;
+			}
 		}
 	}
-	return false;
+
+	if(state == 2) {
+		if(mouseX > 290 && mouseX < 350) {
+			if(mouseY > 420 && mouseY < 440)
+				state = 0;
+		}
+	}
+		return false;
 
 }
 
 //Checks the pressed values and updates the score if correct, resets after
-//1,2,3,4,5 map to red, green, blue, yellow, black respectively
+//2,3,4,5,6 map to red, green, blue, yellow, black respectively
 function checkAnswer(pressedColor) {
+	var wasCorrect = false;
 	switch(pressedColor) {
 		case 49:
-		 	if(currentColor == 'red')
+		 	if(currentColor == 'red') {
 				score++
+				wasCorrect = true;
+			}
 			updateCurrentWord();
 			break;
 		case 50:
-		 	if(currentColor == 'green')
+		 	if(currentColor == 'green') {
 				score++
+				wasCorrect = true;
+			}
 			updateCurrentWord();
 			break;
 		case 51:
-		 	if(currentColor == 'blue')
+		 	if(currentColor == 'blue') {
 				score++
+				wasCorrect = true;
+			}
 			updateCurrentWord();
 			break;
 		case 52:
-		 	if(currentColor == 'yellow')
+		 	if(currentColor == 'yellow') {
 				score++
+				wasCorrect = true;
+			}
 			updateCurrentWord();
 			break;
 		case 53:
-		 	if(currentColor == 'black')
+		 	if(currentColor == 'black') {
 				score++
+				wasCorrect = true;
+			}
 			updateCurrentWord();
 			break;
+	}
+	if(!wasCorrect){
+		lives--;
+		if(lives == 0) {
+			if(pressedColor == 50)
+				inData = 0;						//Nullify indata so game doesn't restart
+			state = 3;
+			finalScore = score;
+		}
 	}
 }
 
@@ -229,9 +298,22 @@ function portOpen() {
 
 function serialEvent() {
   // read a byte from the serial port, convert it to a number:
-  inData = Number(serial.read());
-	checkAnswer(47 + inData);
-	//console.log(inData);
+  inData = parseInt(serial.read());
+	if(inData <= 6 && inData >= 2 && state == 1) {
+		checkAnswer(47 + inData);
+	}
+	if(inData >= 7 && inData <= 13){
+		seconds = inData - 6;
+		timeInRound = 60*(seconds+1);
+		console.log("seconds: " + seconds);
+	}
+
+	if(state == 3 && inData == 3) {
+		state = 1;
+		lives = 5;
+		score = 0;
+	}
+
 }
 
 function serialError(err) {
